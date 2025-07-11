@@ -222,8 +222,9 @@ if __name__ == "__main__":
     print("🔍 Health Check: http://localhost:8000/health")
     
     # Run the server
+    # Use the module:app format for reload functionality
     uvicorn.run(
-        app, 
+        "main:app", 
         host="0.0.0.0", 
         port=8000, 
         reload=True,
