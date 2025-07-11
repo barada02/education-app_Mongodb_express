@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduApp - Learn with AI</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <h1>EduApp</h1>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link active" data-section="home">Home</a>
+                    <a href="#" class="nav-link" data-section="content">Content</a>
+                    <a href="#" class="nav-link" data-section="quiz">Quiz</a>
+                    <a href="#" class="nav-link" data-section="history">History</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Home Section -->
+            <section id="home" class="section active">
+                <div class="container">
+                    <div class="hero">
+                        <h2>Learn Anything with AI-Powered Education</h2>
+                        <p>Generate personalized educational content and quizzes on any topic using advanced AI technology.</p>
+                        
+                        <div class="content-generator">
+                            <h3>Generate Educational Content</h3>
+                            <form id="generateForm" class="generate-form">
+                                <div class="form-group">
+                                    <label for="topic">Topic:</label>
+                                    <input type="text" id="topic" name="topic" placeholder="e.g., Photosynthesis, Machine Learning, World War II" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="difficulty">Difficulty Level:</label>
+                                    <select id="difficulty" name="difficulty" required>
+                                        <option value="">Select difficulty</option>
+                                        <option value="beginner">Beginner</option>
+                                        <option value="intermediate">Intermediate</option>
+                                        <option value="advanced">Advanced</option>
+                                    </select>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary" id="generateBtn">
+                                    <i class="fas fa-magic"></i>
+                                    Generate Content
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Content Section -->
+            <section id="content" class="section">
+                <div class="container">
+                    <h2>Educational Content</h2>
+                    <div id="contentArea" class="content-area">
+                        <div class="empty-state">
+                            <i class="fas fa-book-open"></i>
+                            <h3>No content generated yet</h3>
+                            <p>Go to the Home section to generate educational content on any topic.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quiz Section -->
+            <section id="quiz" class="section">
+                <div class="container">
+                    <h2>Interactive Quiz</h2>
+                    <div id="quizArea" class="quiz-area">
+                        <div class="empty-state">
+                            <i class="fas fa-question-circle"></i>
+                            <h3>No quiz available</h3>
+                            <p>Generate educational content first to access the quiz feature.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section id="history" class="section">
+                <div class="container">
+                    <h2>Learning History</h2>
+                    <div id="historyArea" class="history-area">
+                        <div class="loading" id="historyLoading" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading history...</p>
+                        </div>
+                        <div id="historyContent"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Generating content with AI...</p>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
