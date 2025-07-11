@@ -125,7 +125,7 @@ async function handleGenerateContent(e) {
 
 // Display Content
 function displayContent(content) {
-    const { concept, examples, quiz } = content;
+    const { concept, examples, questions } = content;
     
     elements.contentArea.innerHTML = `
         <div class="content-card fade-in">
@@ -159,8 +159,18 @@ function displayContent(content) {
     `;
 
     // Store quiz data
-    if (quiz && quiz.length > 0) {
-        currentQuiz = quiz;
+    if (questions && questions.length > 0) {
+        // Convert Gemini format to frontend format
+        currentQuiz = questions.map(q => {
+            const options = q.options.map(opt => opt.option || opt);
+            const correct = q.options.findIndex(opt => opt.is_correct === true);
+            return {
+                question: q.question,
+                options: options,
+                correct: correct,
+                explanation: q.explanation || ''
+            };
+        });
         setupQuiz();
     }
 }
@@ -332,6 +342,7 @@ function displayQuizResults() {
                                 <p><strong>Q${index + 1}:</strong> ${question.question}</p>
                                 <p><strong>Your answer:</strong> ${question.options[userAnswer]}</p>
                                 ${!isCorrect ? `<p><strong>Correct answer:</strong> ${question.options[question.correct]}</p>` : ''}
+                                ${question.explanation ? `<p><strong>Explanation:</strong> ${question.explanation}</p>` : ''}
                             </div>
                         `;
                     }).join('')}

@@ -84,7 +84,7 @@ def generate_educational_content(topic="Photosynthesis", difficulty="beginner"):
     try:
         # Get response
         response = client.models.generate_content(
-            model="gemini-2.5-pro",
+            model="gemini-2.5-flash",
             contents=contents,
             config=config
         )
@@ -155,6 +155,8 @@ if __name__ == "__main__":
     
     # Generate content for a specific topic
     result = generate_educational_content("Photosynthesis", "beginner")
+
+    print(result)
     
     if result:
         print("\n✅ Content generated successfully!")
