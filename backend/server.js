@@ -1,6 +1,6 @@
 /**
  * Education App - Express.js Backend Server
- * Handles MongoDB CRUD operations and integrates with Gemini API
+ * Handles MongoDB CRUD operations, user authentication, and integrates with Gemini API
  */
 
 const express = require('express');
@@ -8,8 +8,14 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const axios = require('axios');
 require('dotenv').config();
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const dashboardRoutes = require('./routes/dashboard');
 
 // Initialize Express app
 const app = express();
@@ -20,13 +26,26 @@ const PORT = process.env.PORT || 5000;
 // ===========================
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  }
+}));
 
-// Rate limiting
+// Rate limiting (more lenient in development)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 100 in production, 1000 in development
+  message: 'Too many requests from this IP, please try again later.',
+  skip: (req) => {
+    // Skip rate limiting for development environment
+    return process.env.NODE_ENV !== 'production';
+  }
 });
 app.use('/api/', limiter);
 
@@ -39,6 +58,23 @@ app.use(cors({
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/education_app',
+    collectionName: 'sessions',
+    ttl: 24 * 60 * 60 // 1 day
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+  }
+}));
 
 // ===========================
 // DATABASE CONNECTION
@@ -59,40 +95,16 @@ const connectDB = async () => {
 // MODELS
 // ===========================
 
-// Content Schema
-const contentSchema = new mongoose.Schema({
-  topic: { type: String, required: true, trim: true },
-  difficulty: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
-  concept: { type: String, required: true },
-  examples: [{ type: String }],
-  questions: [{
-    question: { type: String, required: true },
-    options: [{
-      option: { type: String, required: true },
-      is_correct: { type: Boolean, required: true }
-    }],
-    explanation: { type: String, required: true }
-  }],
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
-
-const Content = mongoose.model('Content', contentSchema);
-
-// User Progress Schema (for future use)
-const progressSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  contentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Content' },
-  score: { type: Number, min: 0, max: 100 },
-  answeredQuestions: [{
-    questionIndex: Number,
-    selectedOption: Number,
-    isCorrect: Boolean
-  }],
-  completedAt: { type: Date, default: Date.now }
-});
-
-const Progress = mongoose.model('Progress', progressSchema);
+// Import enhanced models
+const {
+  User,
+  Content,
+  UserProgress,
+  UserStatistics,
+  Achievement,
+  UserAchievement,
+  LearningSession
+} = require('./models');
 
 // ===========================
 // ROUTES
@@ -103,10 +115,20 @@ app.get('/', (req, res) => {
   res.json({
     message: 'Education App Backend API',
     status: 'running',
-    version: '1.0.0',
+    version: '2.0.0',
+    features: [
+      'Educational Content Generation',
+      'User Authentication & Management',
+      'Progress Tracking & Analytics',
+      'Achievement System',
+      'Dashboard & Statistics',
+      'Learning Streaks'
+    ],
     endpoints: {
       content: '/api/content',
       generate: '/api/generate',
+      auth: '/api/auth',
+      dashboard: '/api/dashboard',
       health: '/api/health'
     }
   });
@@ -244,17 +266,47 @@ app.post('/api/generate', async (req, res) => {
     );
 
     const generatedContent = geminiResponse.data;
+    
+    console.log('📥 Gemini API Response:', JSON.stringify(generatedContent, null, 2));
+
+    // Determine category based on topic keywords
+    const topicLower = topic.toLowerCase();
+    let category = 'other'; // default category
+    
+    if (topicLower.includes('math') || topicLower.includes('algebra') || topicLower.includes('geometry') || 
+        topicLower.includes('calculus') || topicLower.includes('statistics') || topicLower.includes('number')) {
+      category = 'mathematics';
+    } else if (topicLower.includes('science') || topicLower.includes('physics') || topicLower.includes('chemistry') || 
+               topicLower.includes('biology') || topicLower.includes('atom') || topicLower.includes('molecule') ||
+               topicLower.includes('spectrum') || topicLower.includes('color') || topicLower.includes('light')) {
+      category = 'science';
+    } else if (topicLower.includes('history') || topicLower.includes('war') || topicLower.includes('ancient') || 
+               topicLower.includes('medieval') || topicLower.includes('civilization')) {
+      category = 'history';
+    } else if (topicLower.includes('language') || topicLower.includes('grammar') || topicLower.includes('literature') || 
+               topicLower.includes('writing') || topicLower.includes('reading')) {
+      category = 'language';
+    } else if (topicLower.includes('computer') || topicLower.includes('programming') || topicLower.includes('technology') || 
+               topicLower.includes('software') || topicLower.includes('algorithm')) {
+      category = 'technology';
+    } else if (topicLower.includes('art') || topicLower.includes('music') || topicLower.includes('painting') || 
+               topicLower.includes('drawing') || topicLower.includes('sculpture')) {
+      category = 'arts';
+    }
 
     // Save to MongoDB
     const newContent = new Content({
       topic: generatedContent.topic,
       difficulty: generatedContent.difficulty,
+      category: category,
       concept: generatedContent.content.concept,
       examples: generatedContent.content.examples,
       questions: generatedContent.content.questions
     });
 
     await newContent.save();
+    
+    console.log('✅ Content saved to database:', newContent._id);
 
     res.status(201).json({
       success: true,
@@ -264,6 +316,16 @@ app.post('/api/generate', async (req, res) => {
 
   } catch (error) {
     console.error('Generate content error:', error.message);
+    console.error('Full error:', error);
+    
+    // More specific error handling
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation error: ' + error.message,
+        details: error.errors
+      });
+    }
     
     if (error.code === 'ECONNREFUSED') {
       return res.status(503).json({
@@ -333,18 +395,67 @@ app.delete('/api/content/:id', async (req, res) => {
 });
 
 // ===========================
-// PROGRESS ROUTES (Future)
+// ROUTE MOUNTING
 // ===========================
 
-// Save user progress
+// Mount authentication routes
+app.use('/api/auth', authRoutes);
+
+// Mount dashboard routes
+app.use('/api/dashboard', dashboardRoutes);
+
+// ===========================
+// ENHANCED PROGRESS ROUTES
+// ===========================
+
+// Save user progress (enhanced)
 app.post('/api/progress', async (req, res) => {
   try {
-    const progress = new Progress(req.body);
-    await progress.save();
+    const { userId, contentId, score, answers, timeSpent } = req.body;
+
+    // Find or create user progress
+    let userProgress = await UserProgress.findOne({ userId, contentId });
+    
+    if (userProgress) {
+      // Update existing progress
+      const newAttempt = {
+        score,
+        answers,
+        timeSpent,
+        attemptedAt: new Date()
+      };
+      
+      userProgress.attempts.push(newAttempt);
+      userProgress.bestScore = Math.max(userProgress.bestScore, score);
+      userProgress.lastAttemptAt = new Date();
+      
+      // Update status based on score
+      if (score >= 90) userProgress.status = 'mastered';
+      else if (score >= 70) userProgress.status = 'completed';
+      else userProgress.status = 'in_progress';
+      
+    } else {
+      // Create new progress
+      userProgress = new UserProgress({
+        userId,
+        contentId,
+        bestScore: score,
+        attempts: [{
+          score,
+          answers,
+          timeSpent,
+          attemptedAt: new Date()
+        }],
+        status: score >= 90 ? 'mastered' : score >= 70 ? 'completed' : 'in_progress',
+        lastAttemptAt: new Date()
+      });
+    }
+
+    await userProgress.save();
     
     res.status(201).json({
       success: true,
-      data: progress,
+      data: userProgress,
       message: 'Progress saved successfully'
     });
   } catch (error) {
@@ -394,13 +505,28 @@ const startServer = async () => {
       console.log(`🗄️  Database: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/education_app'}`);
       console.log(`🤖 Gemini API: ${process.env.GEMINI_API_URL || 'http://localhost:8000'}`);
       console.log('\n📋 Available endpoints:');
-      console.log('  GET  /api/health          - Health check');
-      console.log('  GET  /api/content         - Get all content');
-      console.log('  GET  /api/content/:id     - Get content by ID');
-      console.log('  POST /api/generate        - Generate new content');
-      console.log('  PUT  /api/content/:id     - Update content');
-      console.log('  DELETE /api/content/:id   - Delete content');
-      console.log('\n💡 Ready to handle educational content! 🎓');
+      console.log('  GET  /api/health                    - Health check');
+      console.log('  GET  /api/content                   - Get all content');
+      console.log('  GET  /api/content/:id               - Get content by ID');
+      console.log('  POST /api/generate                  - Generate new content');
+      console.log('  PUT  /api/content/:id               - Update content');
+      console.log('  DELETE /api/content/:id             - Delete content');
+      console.log('  POST /api/progress                  - Save user progress');
+      console.log('\n🔐 Authentication endpoints:');
+      console.log('  POST /api/auth/register             - User registration');
+      console.log('  POST /api/auth/login                - User login');
+      console.log('  POST /api/auth/logout               - User logout');
+      console.log('  GET  /api/auth/profile              - Get user profile');
+      console.log('  PUT  /api/auth/profile              - Update user profile');
+      console.log('  PUT  /api/auth/change-password      - Change password');
+      console.log('\n📊 Dashboard endpoints:');
+      console.log('  GET  /api/dashboard/overview        - Dashboard overview');
+      console.log('  GET  /api/dashboard/stats           - Detailed statistics');
+      console.log('  GET  /api/dashboard/achievements    - User achievements');
+      console.log('  GET  /api/dashboard/progress        - Progress tracking');
+      console.log('  GET  /api/dashboard/streaks         - Learning streaks');
+      console.log('  GET  /api/dashboard/leaderboard     - Leaderboard');
+      console.log('\n💡 Ready to handle educational content with user management! 🎓');
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);

@@ -5,119 +5,288 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduApp - Learn with AI</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="auth.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div id="app">
+    <!-- Landing Page -->
+    <div id="landing-page" class="landing-page">
         <!-- Header -->
-        <header class="header">
+        <header class="landing-header">
             <div class="container">
                 <div class="logo">
                     <i class="fas fa-graduation-cap"></i>
                     <h1>EduApp</h1>
                 </div>
-                <nav class="nav">
-                    <a href="#" class="nav-link active" data-section="home">Home</a>
-                    <a href="#" class="nav-link" data-section="content">Content</a>
-                    <a href="#" class="nav-link" data-section="quiz">Quiz</a>
-                    <a href="#" class="nav-link" data-section="history">History</a>
+                <nav class="landing-nav">
+                    <button class="btn btn-outline" id="loginBtn">Login</button>
+                    <button class="btn btn-primary" id="registerBtn">Get Started</button>
                 </nav>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main class="main">
-            <!-- Home Section -->
-            <section id="home" class="section active">
-                <div class="container">
-                    <div class="hero">
-                        <h2>Learn Anything with AI-Powered Education</h2>
-                        <p>Generate personalized educational content and quizzes on any topic using advanced AI technology.</p>
-                        
-                        <div class="content-generator">
-                            <h3>Generate Educational Content</h3>
-                            <form id="generateForm" class="generate-form">
-                                <div class="form-group">
-                                    <label for="topic">Topic:</label>
-                                    <input type="text" id="topic" name="topic" placeholder="e.g., Photosynthesis, Machine Learning, World War II" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="difficulty">Difficulty Level:</label>
-                                    <select id="difficulty" name="difficulty" required>
-                                        <option value="">Select difficulty</option>
-                                        <option value="beginner">Beginner</option>
-                                        <option value="intermediate">Intermediate</option>
-                                        <option value="advanced">Advanced</option>
-                                    </select>
-                                </div>
-                                
-                                <button type="submit" class="btn btn-primary" id="generateBtn">
-                                    <i class="fas fa-magic"></i>
-                                    Generate Content
-                                </button>
-                            </form>
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1>Learn Anything with AI-Powered Education</h1>
+                        <p>Join thousands of learners who are advancing their knowledge with personalized AI-generated content, interactive quizzes, and progress tracking.</p>
+                        <div class="hero-stats">
+                            <div class="stat">
+                                <span class="stat-number">10,000+</span>
+                                <span class="stat-label">Active Learners</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">50,000+</span>
+                                <span class="stat-label">Topics Covered</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">95%</span>
+                                <span class="stat-label">Success Rate</span>
+                            </div>
+                        </div>
+                        <div class="hero-buttons">
+                            <button class="btn btn-primary btn-large" id="heroRegisterBtn">
+                                <i class="fas fa-rocket"></i>
+                                Start Learning Free
+                            </button>
+                            <button class="btn btn-outline btn-large" id="heroLoginBtn">
+                                <i class="fas fa-sign-in-alt"></i>
+                                Sign In
+                            </button>
+                        </div>
+                    </div>
+                    <div class="hero-visual">
+                        <div class="floating-cards">
+                            <div class="floating-card" style="--delay: 0s">
+                                <i class="fas fa-brain"></i>
+                                <span>AI Learning</span>
+                            </div>
+                            <div class="floating-card" style="--delay: 0.5s">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Progress Tracking</span>
+                            </div>
+                            <div class="floating-card" style="--delay: 1s">
+                                <i class="fas fa-trophy"></i>
+                                <span>Achievements</span>
+                            </div>
+                            <div class="floating-card" style="--delay: 1.5s">
+                                <i class="fas fa-fire"></i>
+                                <span>Learning Streaks</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </section>
-
-            <!-- Content Section -->
-            <section id="content" class="section">
-                <div class="container">
-                    <h2>Educational Content</h2>
-                    <div id="contentArea" class="content-area">
-                        <div class="empty-state">
-                            <i class="fas fa-book-open"></i>
-                            <h3>No content generated yet</h3>
-                            <p>Go to the Home section to generate educational content on any topic.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Quiz Section -->
-            <section id="quiz" class="section">
-                <div class="container">
-                    <h2>Interactive Quiz</h2>
-                    <div id="quizArea" class="quiz-area">
-                        <div class="empty-state">
-                            <i class="fas fa-question-circle"></i>
-                            <h3>No quiz available</h3>
-                            <p>Generate educational content first to access the quiz feature.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- History Section -->
-            <section id="history" class="section">
-                <div class="container">
-                    <h2>Learning History</h2>
-                    <div id="historyArea" class="history-area">
-                        <div class="loading" id="historyLoading" style="display: none;">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>Loading history...</p>
-                        </div>
-                        <div id="historyContent"></div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- Loading Overlay -->
-        <div id="loadingOverlay" class="loading-overlay">
-            <div class="loading-spinner">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>Generating content with AI...</p>
             </div>
-        </div>
+        </section>
 
-        <!-- Toast Notifications -->
-        <div id="toastContainer" class="toast-container"></div>
+        <!-- Features Section -->
+        <section class="features-section">
+            <div class="container">
+                <h2>Why Choose EduApp?</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3>AI-Powered Content</h3>
+                        <p>Generate unlimited educational content on any topic using advanced AI technology powered by Google Gemini.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-gamepad"></i>
+                        </div>
+                        <h3>Gamified Learning</h3>
+                        <p>Earn XP, unlock achievements, maintain learning streaks, and compete on leaderboards to stay motivated.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h3>Progress Analytics</h3>
+                        <p>Track your learning journey with detailed analytics, performance insights, and personalized recommendations.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>Community Learning</h3>
+                        <p>Connect with fellow learners, share achievements, and participate in learning challenges together.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <h3>Learn Anywhere</h3>
+                        <p>Access your learning materials from any device, anytime. Sync your progress across all platforms.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-infinity"></i>
+                        </div>
+                        <h3>Unlimited Topics</h3>
+                        <p>From science to history, programming to literature - learn about anything that interests you.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section">
+            <div class="container">
+                <div class="cta-content">
+                    <h2>Ready to Transform Your Learning?</h2>
+                    <p>Join thousands of learners who are already using EduApp to achieve their educational goals.</p>
+                    <button class="btn btn-primary btn-large" id="ctaRegisterBtn">
+                        <i class="fas fa-graduation-cap"></i>
+                        Start Your Journey Today
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="landing-footer">
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-section">
+                        <div class="logo">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>EduApp</span>
+                        </div>
+                        <p>Empowering learners worldwide with AI-driven education.</p>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Product</h4>
+                        <ul>
+                            <li><a href="#">Features</a></li>
+                            <li><a href="#">Pricing</a></li>
+                            <li><a href="#">API</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="#">About</a></li>
+                            <li><a href="#">Careers</a></li>
+                            <li><a href="#">Contact</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Support</h4>
+                        <ul>
+                            <li><a href="#">Help Center</a></li>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2025 EduApp. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Authentication Modal -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <div class="auth-header">
+                    <h2>Welcome Back!</h2>
+                    <p>Sign in to continue your learning journey</p>
+                </div>
+                <form id="loginFormElement">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Sign In
+                    </button>
+                </form>
+                <div class="auth-switch">
+                    <p>Don't have an account? <a href="#" id="switchToRegister">Sign up here</a></p>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" class="auth-form" style="display: none;">
+                <div class="auth-header">
+                    <h2>Join EduApp</h2>
+                    <p>Create your account and start learning today</p>
+                </div>
+                <form id="registerFormElement">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" name="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" name="lastName" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" name="password" required>
+                        <div class="password-strength">
+                            <div class="strength-bar">
+                                <div class="strength-fill"></div>
+                            </div>
+                            <span class="strength-text">Password strength</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="agreeTerms" required>
+                            <span class="checkmark"></span>
+                            I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fas fa-user-plus"></i>
+                        Create Account
+                    </button>
+                </form>
+                <div class="auth-switch">
+                    <p>Already have an account? <a href="#" id="switchToLogin">Sign in here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="auth.js"></script>
 </body>
 </html>
