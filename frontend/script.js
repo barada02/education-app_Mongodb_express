@@ -27,10 +27,37 @@ const elements = {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuthentication();
     initializeNavigation();
+    initializeUserMenu();
     initializeEventListeners();
+    loadUserProfile();
     loadHistory();
 });
+
+// Check if user is authenticated
+async function checkAuthentication() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            // User not authenticated, redirect to login
+            showToast('Please log in to access the application', 'warning');
+            setTimeout(() => {
+                window.location.href = './index.html';
+            }, 2000);
+            return;
+        }
+    } catch (error) {
+        console.error('Authentication check failed:', error);
+        // On error, also redirect to login
+        setTimeout(() => {
+            window.location.href = './index.html';
+        }, 2000);
+    }
+}
 
 // Navigation System
 function initializeNavigation() {
@@ -53,6 +80,8 @@ function initializeNavigation() {
             // Load section-specific data
             if (targetSection === 'history') {
                 loadHistory();
+            } else if (targetSection === 'dashboard') {
+                loadDashboard();
             }
         });
     });
@@ -557,6 +586,205 @@ function getToastIcon(type) {
         info: 'info-circle'
     };
     return icons[type] || icons.info;
+}
+
+// User Menu Functions
+function initializeUserMenu() {
+    const userProfile = document.getElementById('userProfile');
+    const userDropdown = document.getElementById('userDropdown');
+    const userMenu = document.querySelector('.user-menu');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Toggle user menu
+    userProfile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userMenu.classList.toggle('active');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', () => {
+        userMenu.classList.remove('active');
+    });
+
+    // Prevent menu close when clicking inside dropdown
+    userDropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // Logout functionality
+    logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await handleLogout();
+    });
+}
+
+// Load User Profile
+async function loadUserProfile() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data.user) {
+                const user = data.data.user;
+                document.getElementById('username').textContent = 
+                    user.profile?.firstName || user.username || 'User';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+    }
+}
+
+// Dashboard Functions
+async function loadDashboard() {
+    try {
+        // Load dashboard overview
+        const response = await fetch(`${API_BASE_URL}/dashboard/overview`, {
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                updateDashboardStats(data.data);
+            }
+        } else {
+            // If dashboard API fails, show mock data
+            updateDashboardStats({
+                stats: {
+                    totalContent: 0,
+                    averageScore: 0,
+                    totalTimeSpent: 0,
+                    currentStreak: 0
+                },
+                progress: {
+                    completedLessons: 0,
+                    totalLessons: 1
+                },
+                recentActivity: [],
+                achievements: []
+            });
+        }
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        // Show empty dashboard on error
+        updateDashboardStats({
+            stats: { totalContent: 0, averageScore: 0, totalTimeSpent: 0, currentStreak: 0 },
+            progress: { completedLessons: 0, totalLessons: 1 },
+            recentActivity: [],
+            achievements: []
+        });
+    }
+}
+
+function updateDashboardStats(data) {
+    // Update stats cards
+    const stats = data.stats || {};
+    document.getElementById('totalContent').textContent = stats.totalContent || '0';
+    document.getElementById('averageScore').textContent = `${Math.round(stats.averageScore || 0)}%`;
+    document.getElementById('currentStreak').textContent = stats.currentStreak || '0';
+    
+    // Format time
+    const totalMinutes = stats.totalTimeSpent || 0;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    document.getElementById('totalTime').textContent = 
+        hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+    // Update progress
+    const progress = data.progress || {};
+    const progressPercent = progress.totalLessons > 0 
+        ? Math.round((progress.completedLessons / progress.totalLessons) * 100)
+        : 0;
+    
+    document.getElementById('progressFill').style.width = `${progressPercent}%`;
+    document.getElementById('progressText').textContent = `${progressPercent}% Complete`;
+
+    // Update recent activity
+    updateRecentActivity(data.recentActivity || []);
+    
+    // Update achievements
+    updateAchievements(data.achievements || []);
+}
+
+function updateRecentActivity(activities) {
+    const activityList = document.getElementById('activityList');
+    
+    if (activities.length === 0) {
+        activityList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-history"></i>
+                <p>No recent activity</p>
+            </div>
+        `;
+        return;
+    }
+
+    activityList.innerHTML = activities.map(activity => `
+        <div class="activity-item">
+            <strong>${activity.topic}</strong>
+            <p>Score: ${activity.score}% - ${formatDate(activity.date)}</p>
+        </div>
+    `).join('');
+}
+
+function updateAchievements(achievements) {
+    const achievementList = document.getElementById('achievementList');
+    
+    if (achievements.length === 0) {
+        achievementList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-medal"></i>
+                <p>No achievements yet</p>
+            </div>
+        `;
+        return;
+    }
+
+    achievementList.innerHTML = achievements.map(achievement => `
+        <div class="achievement-item">
+            <i class="fas fa-trophy"></i>
+            <strong>${achievement.title}</strong>
+            <p>${achievement.description}</p>
+        </div>
+    `).join('');
+}
+
+// Logout Function
+async function handleLogout() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            showToast('Logged out successfully', 'success');
+            // Redirect to landing page
+            setTimeout(() => {
+                window.location.href = './index.html';
+            }, 1000);
+        } else {
+            throw new Error('Logout failed');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        showToast('Error logging out', 'error');
+    }
+}
+
+// Helper function to format dates
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 // Add CSS for quiz results
