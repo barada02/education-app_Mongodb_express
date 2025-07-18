@@ -27,10 +27,39 @@ const elements = {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuthentication();
     initializeNavigation();
+    initializeUserMenu();
     initializeEventListeners();
+    loadUserProfile();
     loadHistory();
+    startStudySession(); // Start study session when app loads
+    initializeStudyTimer(); // Initialize real-time study timer
 });
+
+// Check if user is authenticated
+async function checkAuthentication() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            // User not authenticated, redirect to login
+            showToast('Please log in to access the application', 'warning');
+            setTimeout(() => {
+                window.location.href = './index.html';
+            }, 2000);
+            return;
+        }
+    } catch (error) {
+        console.error('Authentication check failed:', error);
+        // On error, also redirect to login
+        setTimeout(() => {
+            window.location.href = './index.html';
+        }, 2000);
+    }
+}
 
 // Navigation System
 function initializeNavigation() {
@@ -53,6 +82,8 @@ function initializeNavigation() {
             // Load section-specific data
             if (targetSection === 'history') {
                 loadHistory();
+            } else if (targetSection === 'dashboard') {
+                loadDashboard();
             }
         });
     });
@@ -77,6 +108,13 @@ function initializeEventListeners() {
 async function handleGenerateContent(e) {
     e.preventDefault();
     
+    // Check if user is logged in first
+    const sessionStatus = await checkSession();
+    if (!sessionStatus.authenticated) {
+        showToast('Please log in to generate content', 'warning');
+        return;
+    }
+    
     const formData = new FormData(elements.generateForm);
     const topic = formData.get('topic').trim();
     const difficulty = formData.get('difficulty');
@@ -95,6 +133,7 @@ async function handleGenerateContent(e) {
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include', // Include session cookies
             body: JSON.stringify({ topic, difficulty })
         });
 
@@ -108,6 +147,13 @@ async function handleGenerateContent(e) {
             currentContent = data.data;
             displayContent(data.data);
             showToast('Content generated successfully!', 'success');
+            
+            // Track content generation activity
+            updateStudyActivity('content_generated', { 
+                contentId: data.data._id,
+                topic: data.data.topic,
+                difficulty: data.data.difficulty 
+            });
             
             // Switch to content tab
             switchToSection('content');
@@ -193,7 +239,8 @@ function setupQuiz() {
         currentQuestion: 0,
         answers: new Array(currentQuiz.length).fill(null),
         score: 0,
-        isComplete: false
+        isComplete: false,
+        startTime: Date.now() // Track when quiz started
     };
 
     displayQuiz();
@@ -475,18 +522,124 @@ async function saveQuizResult() {
     if (!currentContent || !quizState.isComplete) return;
 
     try {
+        console.log('💾 Saving quiz result...');
+        
+        // Calculate quiz metrics
+        const totalQuestions = currentQuiz.length;
+        const correctAnswers = quizState.score;
+        const scorePercentage = Math.round((correctAnswers / totalQuestions) * 100);
+        const timeSpentSeconds = Math.floor((Date.now() - quizState.startTime) / 1000);
+        
+        // Prepare detailed answers data for backend
+        const detailedAnswers = quizState.answers.map((selectedOption, questionIndex) => {
+            const question = currentQuiz[questionIndex];
+            const isCorrect = selectedOption === question.correct;
+            
+            return {
+                questionIndex,
+                selectedOption: selectedOption !== null ? selectedOption : 0,
+                isCorrect,
+                questionText: question.question,
+                correctAnswer: question.correct,
+                timeSpent: Math.floor(timeSpentSeconds / totalQuestions) // Distribute time evenly
+            };
+        });
+        
         const quizData = {
             contentId: currentContent._id,
-            score: quizState.score,
-            totalQuestions: currentQuiz.length,
-            answers: quizState.answers,
+            score: scorePercentage,
+            correctAnswers,
+            totalQuestions,
+            answers: quizState.answers, // Keep simple format for now, backend will transform
+            detailedAnswers, // Send detailed format too for logging
+            timeSpent: timeSpentSeconds,
+            startedAt: new Date(quizState.startTime).toISOString(),
             completedAt: new Date().toISOString()
         };
 
-        // Note: Add quiz results endpoint to backend if needed
-        console.log('Quiz completed:', quizData);
+        console.log('📤 Sending quiz data:', quizData);
+
+        // Save quiz results to backend
+        const response = await fetch(`${API_BASE_URL}/progress`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(quizData)
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Quiz result saved successfully:', result);
+            
+            // Track quiz completion in study session
+            const xpEarned = Math.round(quizData.score); // 1 XP per percentage point
+            updateStudyActivity('quiz_completed', { 
+                contentId: quizData.contentId,
+                score: quizData.score,
+                xpEarned: xpEarned
+            });
+            
+            // Update user statistics
+            await updateUserStatistics(quizData);
+            
+            // Refresh dashboard if it's currently visible
+            const dashboardSection = document.getElementById('dashboard');
+            if (dashboardSection && dashboardSection.classList.contains('active')) {
+                loadDashboard();
+            }
+        } else {
+            console.error('❌ Failed to save quiz result:', response.status);
+        }
     } catch (error) {
-        console.error('Error saving quiz result:', error);
+        console.error('❌ Error saving quiz result:', error);
+    }
+}
+
+// Get current user ID from session
+async function getCurrentUserId() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            return data.data.user._id;
+        }
+    } catch (error) {
+        console.error('Error getting user ID:', error);
+    }
+    return null;
+}
+
+// Check current session status
+async function checkSession() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/session`, {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('🔍 Session status:', data);
+            return data;
+        }
+    } catch (error) {
+        console.error('❌ Error checking session:', error);
+    }
+    return { success: false, authenticated: false };
+}
+
+// Update user statistics after quiz completion
+async function updateUserStatistics(quizData) {
+    try {
+        // This will be handled by the backend when saving progress
+        // The backend should automatically update UserStatistics
+        console.log('📊 User statistics will be updated by backend');
+    } catch (error) {
+        console.error('Error updating user statistics:', error);
     }
 }
 
@@ -557,6 +710,340 @@ function getToastIcon(type) {
         info: 'info-circle'
     };
     return icons[type] || icons.info;
+}
+
+// User Menu Functions
+function initializeUserMenu() {
+    const userProfile = document.getElementById('userProfile');
+    const userDropdown = document.getElementById('userDropdown');
+    const userMenu = document.querySelector('.user-menu');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Toggle user menu
+    userProfile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userMenu.classList.toggle('active');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', () => {
+        userMenu.classList.remove('active');
+    });
+
+    // Prevent menu close when clicking inside dropdown
+    userDropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // Logout functionality
+    logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await handleLogout();
+    });
+}
+
+// Load User Profile
+async function loadUserProfile() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data.user) {
+                const user = data.data.user;
+                document.getElementById('username').textContent = 
+                    user.profile?.firstName || user.username || 'User';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+    }
+}
+
+// Dashboard Functions
+async function loadDashboard() {
+    try {
+        console.log('🔄 Loading dashboard data...');
+        
+        // Load dashboard overview - note the correct API path
+        const response = await fetch(`${API_BASE_URL}/dashboard/overview`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('📡 Dashboard API response status:', response.status);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📊 Dashboard data received:', data);
+            
+            if (data.success) {
+                updateDashboardStats(data.data);
+            } else {
+                throw new Error(data.error || 'Failed to load dashboard data');
+            }
+        } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('❌ Error loading dashboard:', error);
+        // Show helpful message for new users
+        showWelcomeDashboard();
+    }
+}
+
+// Show welcome dashboard for new users
+function showWelcomeDashboard() {
+    updateDashboardStats({
+        stats: {
+            overall: {
+                totalQuizzesTaken: 0,
+                overallAccuracy: 0,
+                totalXP: 0
+            },
+            streaks: {
+                current: { count: 0 }
+            }
+        },
+        contentStats: {
+            totalContent: 0
+        },
+        levelInfo: {
+            currentLevel: 1,
+            levelProgress: 0,
+            currentXP: 0,
+            xpForNextLevel: 100
+        },
+        recentProgress: [],
+        recentAchievements: []
+    });
+
+    // Add welcome message
+    const activityList = document.getElementById('recent-activity');
+    if (activityList) {
+        activityList.innerHTML = `
+            <li class="activity-item welcome-message">
+                <div class="activity-content">
+                    <strong>🎉 Welcome to your learning dashboard!</strong>
+                    <p>Generate content and take quizzes to see your progress here. Your study time will be tracked automatically!</p>
+                </div>
+            </li>
+        `;
+    }
+
+    const achievementsList = document.getElementById('recent-achievements');
+    if (achievementsList) {
+        achievementsList.innerHTML = `
+            <li class="achievement-item welcome-message">
+                <div class="achievement-icon">🎯</div>
+                <div class="achievement-content">
+                    <strong>Your First Achievement Awaits!</strong>
+                    <span>Complete your first quiz to unlock your first achievement</span>
+                </div>
+            </li>
+        `;
+    }
+}
+
+function updateDashboardStats(data) {
+    try {
+        console.log('🎯 Updating dashboard with data:', data);
+
+        const { stats, recentProgress, recentAchievements, levelInfo, contentStats, activeSession } = data;
+
+        // Update stats cards with the correct element IDs
+        if (stats && stats.overall) {
+            const totalQuizzesEl = document.getElementById('total-quizzes');
+            const accuracyEl = document.getElementById('accuracy-rate');
+            const streakEl = document.getElementById('current-streak');
+            const xpEl = document.getElementById('total-xp');
+
+            if (totalQuizzesEl) totalQuizzesEl.textContent = stats.overall.totalQuizzesTaken || 0;
+            if (accuracyEl) accuracyEl.textContent = `${(stats.overall.overallAccuracy || 0).toFixed(1)}%`;
+            if (streakEl) streakEl.textContent = stats.streaks?.current?.count || 0;
+            if (xpEl) xpEl.textContent = stats.overall.totalXP || 0;
+        }
+
+        // Update content generated statistics
+        if (contentStats) {
+            const contentGeneratedEl = document.getElementById('content-generated');
+            if (contentGeneratedEl) {
+                contentGeneratedEl.textContent = contentStats.totalContent || 0;
+            }
+        }
+
+        // Update study time (real-time timer will handle current session)
+        // This shows total study time from previous sessions
+        if (activeSession && activeSession.duration) {
+            // If there's an active session, the timer will show current session time
+            // This could show total time from completed sessions if needed
+        }
+
+        // Update level progress
+        if (levelInfo) {
+            const levelEl = document.getElementById('current-level');
+            const progressEl = document.getElementById('level-progress');
+            const xpTextEl = document.getElementById('level-xp');
+
+            if (levelEl) levelEl.textContent = levelInfo.currentLevel || 1;
+            if (progressEl) progressEl.style.width = `${levelInfo.levelProgress || 0}%`;
+            if (xpTextEl) xpTextEl.textContent = `${levelInfo.currentXP || 0} / ${levelInfo.xpForNextLevel || 100} XP`;
+        }
+
+        // Update recent activity
+        const activityList = document.getElementById('recent-activity');
+        if (activityList) {
+            activityList.innerHTML = '';
+            
+            if (!recentProgress || recentProgress.length === 0) {
+                activityList.innerHTML = '<li class="activity-item">No recent activity. Start taking quizzes to see your progress!</li>';
+            } else {
+                recentProgress.forEach(progress => {
+                    const activityItem = document.createElement('li');
+                    activityItem.className = 'activity-item';
+                    activityItem.innerHTML = `
+                        <div class="activity-content">
+                            <strong>${progress.contentId?.topic || 'Unknown Topic'}</strong>
+                            <span class="activity-score">Score: ${progress.bestScore || 0}%</span>
+                        </div>
+                        <div class="activity-time">${formatTimeAgo(progress.lastAttemptAt)}</div>
+                    `;
+                    activityList.appendChild(activityItem);
+                });
+            }
+        }
+
+        // Update achievements
+        const achievementsList = document.getElementById('recent-achievements');
+        if (achievementsList) {
+            achievementsList.innerHTML = '';
+            
+            if (!recentAchievements || recentAchievements.length === 0) {
+                achievementsList.innerHTML = '<li class="achievement-item">No achievements yet. Keep learning to unlock achievements!</li>';
+            } else {
+                recentAchievements.forEach(achievement => {
+                    const achievementItem = document.createElement('li');
+                    achievementItem.className = 'achievement-item';
+                    achievementItem.innerHTML = `
+                        <div class="achievement-icon">🏆</div>
+                        <div class="achievement-content">
+                            <strong>${achievement.achievementId?.name || 'Achievement'}</strong>
+                            <span>${achievement.achievementId?.description || 'Well done!'}</span>
+                        </div>
+                    `;
+                    achievementsList.appendChild(achievementItem);
+                });
+            }
+        }
+
+        console.log('✅ Dashboard updated successfully');
+    } catch (error) {
+        console.error('❌ Error updating dashboard:', error);
+    }
+}
+
+// Format time ago helper function
+function formatTimeAgo(dateString) {
+    if (!dateString) return 'Recently';
+    
+    try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSecs = Math.floor(diffMs / 1000);
+        const diffMins = Math.floor(diffSecs / 60);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        if (diffMins > 0) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+        return 'Just now';
+    } catch (error) {
+        return 'Recently';
+    }
+}
+
+function updateRecentActivity(activities) {
+    const activityList = document.getElementById('activityList');
+    
+    if (activities.length === 0) {
+        activityList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-history"></i>
+                <p>No recent activity</p>
+            </div>
+        `;
+        return;
+    }
+
+    activityList.innerHTML = activities.map(activity => `
+        <div class="activity-item">
+            <strong>${activity.topic}</strong>
+            <p>Score: ${activity.score}% - ${formatDate(activity.date)}</p>
+        </div>
+    `).join('');
+}
+
+function updateAchievements(achievements) {
+    const achievementList = document.getElementById('achievementList');
+    
+    if (achievements.length === 0) {
+        achievementList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-medal"></i>
+                <p>No achievements yet</p>
+            </div>
+        `;
+        return;
+    }
+
+    achievementList.innerHTML = achievements.map(achievement => `
+        <div class="achievement-item">
+            <i class="fas fa-trophy"></i>
+            <strong>${achievement.title}</strong>
+            <p>${achievement.description}</p>
+        </div>
+    `).join('');
+}
+
+// Logout Function
+async function handleLogout() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            showToast('Logged out successfully', 'success');
+            // Redirect to landing page
+            setTimeout(() => {
+                window.location.href = './index.html';
+            }, 1000);
+        } else {
+            throw new Error('Logout failed');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        showToast('Error logging out', 'error');
+    }
+}
+
+// Helper function to format dates
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 // Add CSS for quiz results
@@ -663,6 +1150,124 @@ const additionalCSS = `
 
 // Inject additional CSS
 const style = document.createElement('style');
+// Study Session Management
+let currentStudySession = null;
+let studyStartTime = null;
+let studyTimerInterval = null;
+
+// Start a study session
+async function startStudySession() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/dashboard/study-session/start`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                currentStudySession = data.data;
+                studyStartTime = new Date(currentStudySession.startTime);
+                console.log('📚 Study session started:', currentStudySession._id);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error starting study session:', error);
+    }
+}
+
+// End current study session
+async function endStudySession() {
+    try {
+        if (!currentStudySession) return;
+
+        const response = await fetch(`${API_BASE_URL}/dashboard/study-session/end`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                console.log('📚 Study session ended. Duration:', Math.floor(data.data.duration / 60), 'minutes');
+                currentStudySession = null;
+                studyStartTime = null;
+                if (studyTimerInterval) {
+                    clearInterval(studyTimerInterval);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error ending study session:', error);
+    }
+}
+
+// Update study session activity
+async function updateStudyActivity(type, data = {}) {
+    try {
+        if (!currentStudySession) return;
+
+        const response = await fetch(`${API_BASE_URL}/dashboard/study-session/activity`, {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, data })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                currentStudySession = result.data;
+                console.log('📊 Study activity updated:', type);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error updating study activity:', error);
+    }
+}
+
+// Initialize real-time study timer
+function initializeStudyTimer() {
+    studyTimerInterval = setInterval(() => {
+        if (studyStartTime) {
+            const now = new Date();
+            const studyTime = Math.floor((now - studyStartTime) / 1000); // seconds
+            updateStudyTimeDisplay(studyTime);
+        }
+    }, 1000); // Update every second
+}
+
+// Update study time display
+function updateStudyTimeDisplay(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    let timeString;
+    if (hours > 0) {
+        timeString = `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+        timeString = `${minutes}m ${secs}s`;
+    } else {
+        timeString = `${secs}s`;
+    }
+
+    const studyTimeEl = document.getElementById('study-time');
+    if (studyTimeEl) {
+        studyTimeEl.textContent = timeString;
+    }
+}
+
+// End study session when user leaves/closes the page
+window.addEventListener('beforeunload', () => {
+    if (currentStudySession) {
+        // Use sendBeacon for reliable cleanup on page unload
+        navigator.sendBeacon(`${API_BASE_URL}/dashboard/study-session/end`, JSON.stringify({}));
+    }
+});
+
 style.textContent = additionalCSS;
 document.head.appendChild(style);
 

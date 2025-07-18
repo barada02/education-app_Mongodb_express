@@ -47,6 +47,10 @@ const server = http.createServer((req, res) => {
     const extname = path.extname(filePath);
     const contentType = mimeTypes[extname] || 'text/plain';
 
+    // Debug logging
+    console.log(`Requested: ${pathname}`);
+    console.log(`Looking for: ${filePath}`);
+
     // Check if file exists
     fs.access(filePath, fs.constants.F_OK, (err) => {
         if (err) {

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiseBuddy - Learn with AI</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <h1>WiseBuddy</h1>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link active" data-section="home">Home</a>
+                    <a href="#" class="nav-link" data-section="content">Content</a>
+                    <a href="#" class="nav-link" data-section="quiz">Quiz</a>
+                    <a href="#" class="nav-link" data-section="dashboard">Dashboard</a>
+                    <a href="#" class="nav-link" data-section="history">History</a>
+                </nav>
+                <div class="user-menu">
+                    <div class="user-profile" id="userProfile">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="username">User</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="dropdown-menu" id="userDropdown">
+                        <a href="#" id="profileBtn"><i class="fas fa-user"></i> Profile</a>
+                        <a href="#" id="settingsBtn"><i class="fas fa-cog"></i> Settings</a>
+                        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Home Section -->
+            <section id="home" class="section active">
+                <div class="container">
+                    <div class="hero">
+                        <h2>Learn Anything with WiseBuddy's AI-Powered Education</h2>
+                        <p>Generate personalized educational content and quizzes on any topic using advanced AI technology.</p>
+                        
+                        <div class="content-generator">
+                            <h3>Generate Educational Content</h3>
+                            <form id="generateForm" class="generate-form">
+                                <div class="form-group">
+                                    <label for="topic">Topic:</label>
+                                    <input type="text" id="topic" name="topic" placeholder="e.g., Photosynthesis, Machine Learning, World War II" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="difficulty">Difficulty Level:</label>
+                                    <select id="difficulty" name="difficulty" required>
+                                        <option value="">Select difficulty</option>
+                                        <option value="beginner">Beginner</option>
+                                        <option value="intermediate">Intermediate</option>
+                                        <option value="advanced">Advanced</option>
+                                    </select>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary" id="generateBtn">
+                                    <i class="fas fa-magic"></i>
+                                    Generate Content
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Content Section -->
+            <section id="content" class="section">
+                <div class="container">
+                    <h2>Educational Content</h2>
+                    <div id="contentArea" class="content-area">
+                        <div class="empty-state">
+                            <i class="fas fa-book-open"></i>
+                            <h3>No content generated yet</h3>
+                            <p>Go to the Home section to generate educational content on any topic.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quiz Section -->
+            <section id="quiz" class="section">
+                <div class="container">
+                    <h2>Interactive Quiz</h2>
+                    <div id="quizArea" class="quiz-area">
+                        <div class="empty-state">
+                            <i class="fas fa-question-circle"></i>
+                            <h3>No quiz available</h3>
+                            <p>Generate educational content first to access the quiz feature.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section">
+                <div class="container">
+                    <h2>Your Learning Dashboard</h2>
+                    <div id="dashboardArea" class="dashboard-area">
+                        <div class="dashboard-grid">
+                            <!-- Stats Cards -->
+                            <div class="stats-cards">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-magic"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h3 id="content-generated">0</h3>
+                                        <p>Content Generated</p>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-tasks"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h3 id="total-quizzes">0</h3>
+                                        <p>Quizzes Taken</p>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-percentage"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h3 id="accuracy-rate">0%</h3>
+                                        <p>Accuracy Rate</p>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-fire"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h3 id="current-streak">0</h3>
+                                        <p>Day Streak</p>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h3 id="study-time">0m</h3>
+                                        <p>Study Time Today</p>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-star"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h3 id="total-xp">0</h3>
+                                        <p>Total XP</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Progress Chart -->
+                            <div class="progress-section">
+                                <h3>Learning Progress</h3>
+                                <div class="progress-chart">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                                    </div>
+                                    <p id="progressText">0% Complete</p>
+                                </div>
+                            </div>
+
+                            <!-- Recent Activity -->
+                            <div class="recent-activity">
+                                <h3>Recent Activity</h3>
+                                <div class="activity-list" id="activityList">
+                                    <div class="empty-state">
+                                        <i class="fas fa-history"></i>
+                                        <p>No recent activity</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Achievements -->
+                            <div class="achievements">
+                                <h3>Achievements</h3>
+                                <div class="achievement-list" id="achievementList">
+                                    <div class="empty-state">
+                                        <i class="fas fa-medal"></i>
+                                        <p>No achievements yet</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section id="history" class="section">
+                <div class="container">
+                    <h2>Learning History</h2>
+                    <div id="historyArea" class="history-area">
+                        <div class="loading" id="historyLoading" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading history...</p>
+                        </div>
+                        <div id="historyContent"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Generating content with AI...</p>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
