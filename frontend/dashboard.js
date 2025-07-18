@@ -169,7 +169,7 @@ class Dashboard {
             <i class="fas fa-info"></i>
           </div>
           <div class="activity-content">
-            <div class="activity-title">Welcome to EduApp!</div>
+            <div class="activity-title">Welcome to WiseBuddy!</div>
             <div class="activity-desc">Start learning by generating your first quiz</div>
           </div>
           <div class="activity-time">Just now</div>
