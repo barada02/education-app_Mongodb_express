@@ -64,6 +64,35 @@ router.get('/overview', requireAuth, async (req, res) => {
       .sort({ unlockedAt: -1 })
       .limit(3);
 
+    // Get user-generated content statistics
+    console.log(`📊 Fetching content stats for user: ${userId}`);
+    
+    const userContentStats = await Content.aggregate([
+      { $match: { createdByUser: new mongoose.Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: null,
+          totalContent: { $sum: 1 },
+          categories: { $addToSet: '$category' },
+          difficulties: { $addToSet: '$difficulty' }
+        }
+      }
+    ]);
+
+    console.log(`📈 User content stats result:`, userContentStats);
+
+    const contentStats = userContentStats[0] || {
+      totalContent: 0,
+      categories: [],
+      difficulties: []
+    };
+
+    // Get current active study session
+    const activeSession = await LearningSession.findOne({
+      userId,
+      endTime: null // Session is still active
+    });
+
     // Calculate level progress
     const currentLevel = userStats.overall.currentLevel;
     const currentXP = userStats.overall.totalXP;
@@ -77,6 +106,8 @@ router.get('/overview', requireAuth, async (req, res) => {
         stats: userStats,
         recentProgress,
         recentAchievements,
+        contentStats, // Add user-generated content statistics
+        activeSession, // Add current study session info
         levelInfo: {
           currentLevel,
           currentXP,
@@ -448,6 +479,153 @@ router.get('/leaderboard', optionalAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch leaderboard'
+    });
+  }
+});
+
+// ===========================
+// STUDY SESSION MANAGEMENT
+// ===========================
+
+// Start a new study session
+router.post('/study-session/start', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+
+    // Check if there's already an active session
+    const activeSession = await LearningSession.findOne({
+      userId,
+      endTime: null
+    });
+
+    if (activeSession) {
+      return res.json({
+        success: true,
+        data: activeSession,
+        message: 'Study session already active'
+      });
+    }
+
+    // Create new study session
+    const newSession = new LearningSession({
+      userId,
+      startTime: new Date(),
+      activitiesCount: 0,
+      quizzesCompleted: 0,
+      contentGenerated: 0,
+      xpEarned: 0
+    });
+
+    await newSession.save();
+
+    console.log(`📚 Study session started for user ${userId}`);
+
+    res.status(201).json({
+      success: true,
+      data: newSession,
+      message: 'Study session started successfully'
+    });
+
+  } catch (error) {
+    console.error('Start study session error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start study session'
+    });
+  }
+});
+
+// End current study session
+router.post('/study-session/end', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+
+    // Find active session
+    const activeSession = await LearningSession.findOne({
+      userId,
+      endTime: null
+    });
+
+    if (!activeSession) {
+      return res.status(404).json({
+        success: false,
+        error: 'No active study session found'
+      });
+    }
+
+    // End the session
+    const endTime = new Date();
+    const duration = Math.floor((endTime - activeSession.startTime) / 1000); // Duration in seconds
+
+    activeSession.endTime = endTime;
+    activeSession.duration = duration;
+
+    await activeSession.save();
+
+    console.log(`📚 Study session ended for user ${userId}. Duration: ${Math.floor(duration / 60)} minutes`);
+
+    res.json({
+      success: true,
+      data: activeSession,
+      message: 'Study session ended successfully'
+    });
+
+  } catch (error) {
+    console.error('End study session error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to end study session'
+    });
+  }
+});
+
+// Update study session activity
+router.put('/study-session/activity', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const { type, data } = req.body; // type: 'quiz_completed', 'content_generated', etc.
+
+    // Find active session
+    const activeSession = await LearningSession.findOne({
+      userId,
+      endTime: null
+    });
+
+    if (!activeSession) {
+      return res.status(404).json({
+        success: false,
+        error: 'No active study session found'
+      });
+    }
+
+    // Update session based on activity type
+    switch (type) {
+      case 'quiz_completed':
+        activeSession.quizzesCompleted += 1;
+        activeSession.activitiesCount += 1;
+        if (data?.xpEarned) activeSession.xpEarned += data.xpEarned;
+        break;
+      case 'content_generated':
+        activeSession.contentGenerated = (activeSession.contentGenerated || 0) + 1;
+        activeSession.activitiesCount += 1;
+        break;
+      default:
+        activeSession.activitiesCount += 1;
+    }
+
+    await activeSession.save();
+
+    res.json({
+      success: true,
+      data: activeSession,
+      message: 'Study session updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update study session error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update study session'
     });
   }
 });

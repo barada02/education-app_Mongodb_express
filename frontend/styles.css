@@ -160,7 +160,7 @@ body {
 
 .stats-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1rem;
     grid-column: 1 / -1;
 }
@@ -821,4 +821,59 @@ body {
     .progress-section, .recent-activity, .achievements {
         padding: 1rem;
     }
+}
+
+/* Welcome messages for new users */
+.welcome-message {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    border: none;
+}
+
+.welcome-message .activity-content strong,
+.welcome-message .achievement-content strong {
+    color: #fff !important;
+    font-size: 1.1em;
+}
+
+.welcome-message .activity-content p,
+.welcome-message .achievement-content span {
+    color: rgba(255, 255, 255, 0.9) !important;
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+.welcome-message .achievement-icon {
+    color: #ffd700 !important;
+    font-size: 1.5em;
+}
+
+/* Retry button styles */
+.retry-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+}
+
+.retry-btn:hover {
+    background: var(--primary-dark);
+}
+
+.error-message {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.error-message h3 {
+    color: #e74c3c;
+    margin-bottom: 1rem;
 }

@@ -209,6 +209,12 @@ const contentSchema = new mongoose.Schema({
     default: 'ai',
     enum: ['ai', 'admin', 'user']
   },
+  // User who generated this content (when createdBy is 'user')
+  createdByUser: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null // null for AI/admin generated content
+  },
   isPublished: {
     type: Boolean,
     default: true
