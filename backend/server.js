@@ -1,5 +1,5 @@
 /**
- * Education App - Express.js Backend Server
+ * WiseBuddy - Express.js Backend Server
  * Handles MongoDB CRUD operations, user authentication, and integrates with Gemini API
  */
 
@@ -114,7 +114,7 @@ const {
 // Root route
 app.get('/', (req, res) => {
   res.json({
-    message: 'Education App Backend API',
+    message: 'WiseBuddy Backend API',
     status: 'running',
     version: '2.0.0',
     features: [
@@ -805,7 +805,7 @@ const startServer = async () => {
     
     // Start server
     app.listen(PORT, () => {
-      console.log('🚀 Education App Backend Server Started');
+      console.log('🚀 WiseBuddy Backend Server Started');
       console.log('=' * 40);
       console.log(`📍 Server running on: http://localhost:${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
